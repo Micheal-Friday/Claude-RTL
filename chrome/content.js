@@ -1,5 +1,5 @@
 /**
- * Claude RTL — sets an explicit dir on text containers on claude.ai so that
+ * Claude & ChatGPT RTL — sets an explicit dir on text containers so that
  * Persian/Arabic paragraphs render right-to-left, per element.
  *
  * Instead of relying on dir="auto" (which decides direction from the FIRST
@@ -18,14 +18,19 @@
 
   const api = typeof browser !== "undefined" ? browser : chrome;
 
-  // Block-level text containers worth fixing, plus the ProseMirror composer.
+  // Rendered text, ChatGPT user bubbles, and both sites' composers.
   const TEXT_SELECTOR = [
     "p",
     "li",
     "h1", "h2", "h3", "h4", "h5", "h6",
     "blockquote",
     "td", "th",
-    'div[contenteditable="true"]',
+    'td :is(div, p, li, blockquote, [dir], [style])',
+    'th :is(div, p, li, blockquote, [dir], [style])',
+    '[contenteditable="true"]',
+    'textarea#prompt-textarea',
+    '[data-message-author-role="user"]',
+    '[data-message-author-role="user"] .whitespace-pre-wrap',
   ].join(", ");
 
   // Never touch code — it must stay LTR.
@@ -44,6 +49,32 @@
   // Attribute used to remember the element's original `dir` so we can restore
   // it exactly when the extension is turned off.
   const PREV_ATTR = "data-crtl-prev";
+  const tableStyles = new Map();
+
+  function applyTableStyles(el, direction) {
+    if (direction === "auto" || !el.closest("td, th")) return;
+    // Inline !important declarations also beat a cell wrapper's inline styles.
+    // Remember individual properties so disabling preserves unrelated updates.
+    const values = {
+      direction,
+      "text-align": direction === "rtl" ? "right" : "left",
+      "unicode-bidi": "isolate",
+    };
+    if (!tableStyles.has(el)) {
+      tableStyles.set(el, {
+        hadStyle: el.hasAttribute("style"),
+        properties: Object.keys(values).map(name => [
+          name, el.style.getPropertyValue(name), el.style.getPropertyPriority(name),
+        ]),
+      });
+    }
+    for (const [name, value] of Object.entries(values)) {
+      if (el.style.getPropertyValue(name) !== value ||
+          el.style.getPropertyPriority(name) !== "important") {
+        el.style.setProperty(name, value, "important");
+      }
+    }
+  }
 
   function remember(el) {
     if (!el.hasAttribute(PREV_ATTR)) {
@@ -52,14 +83,15 @@
   }
 
   function applyDir(el) {
-    if (el.closest(SKIP_SELECTOR)) return;
+    if (el.closest(SKIP_SELECTOR + ", " + MATH_SELECTOR)) return;
     // The composer follows what you type, so leave the native auto detection
     // there; explicit rtl/ltr is only for rendered message blocks.
-    const want = el.isContentEditable
+    const want = el.isContentEditable || el.matches("textarea")
       ? "auto"
       : RTL_CHARS.test(el.textContent || "")
         ? "rtl"
         : "ltr";
+    applyTableStyles(el, want);
     if (el.getAttribute("dir") === want) return;
     remember(el);
     el.setAttribute("dir", want);
@@ -75,7 +107,11 @@
 
   function process(root) {
     if (root.nodeType !== Node.ELEMENT_NODE) return;
-    if (root.matches(TEXT_SELECTOR)) applyDir(root);
+    // Streaming tokens may arrive inside spans or replace existing text.
+    // Revisit enclosing blocks so their direction follows the update.
+    for (let el = root; el; el = el.parentElement) {
+      if (el.matches(TEXT_SELECTOR)) applyDir(el);
+    }
     for (const el of root.querySelectorAll(TEXT_SELECTOR)) applyDir(el);
     if (root.matches(MATH_SELECTOR)) isolateMath(root);
     for (const el of root.querySelectorAll(MATH_SELECTOR)) isolateMath(el);
@@ -83,6 +119,14 @@
 
   // Restore every element we touched back to its original state.
   function revertAll() {
+    for (const [el, previous] of tableStyles) {
+      for (const [name, value, priority] of previous.properties) {
+        if (value) el.style.setProperty(name, value, priority);
+        else el.style.removeProperty(name);
+      }
+      if (!previous.hadStyle && !el.getAttribute("style")) el.removeAttribute("style");
+    }
+    tableStyles.clear();
     for (const el of document.querySelectorAll("[" + PREV_ATTR + "]")) {
       const prev = el.getAttribute(PREV_ATTR);
       if (prev) el.setAttribute("dir", prev);
@@ -104,19 +148,25 @@
       scheduled = false;
       const batch = [...pending];
       pending.clear();
-      for (const n of batch) process(n);
+      if (!running) return;
+      for (const n of batch) {
+        if (n.isConnected) process(n);
+      }
     });
   }
 
   const observer = new MutationObserver((mutations) => {
     for (const m of mutations) {
       if (m.type === "childList") {
+        schedule(m.target);
         for (const n of m.addedNodes) {
           if (n.nodeType === Node.ELEMENT_NODE) schedule(n);
           else if (n.parentElement) schedule(n.parentElement);
         }
       } else if (m.type === "characterData" && m.target.parentElement) {
         schedule(m.target.parentElement);
+      } else if (m.type === "attributes") {
+        schedule(m.target);
       }
     }
   });
@@ -133,6 +183,8 @@
       childList: true,
       subtree: true,
       characterData: true,
+      attributes: true,
+      attributeFilter: ["dir", "style"],
     });
     process(document.body || document.documentElement);
   }

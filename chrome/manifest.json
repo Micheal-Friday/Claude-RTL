@@ -1,9 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Claude RTL (Persian & Arabic)",
-  "version": "1.0.0",
-  "description": "Automatic right-to-left text direction for Persian and Arabic text on claude.ai. Keeps code blocks LTR.",
-  "permissions": ["storage"],
+  "name": "Claude & ChatGPT RTL (Persian & Arabic)",
+  "version": "1.1.1",
+  "description": "Automatic Persian and Arabic RTL support for Claude and ChatGPT. Keeps code and math left-to-right.",
+  "permissions": [
+    "storage"
+  ],
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
@@ -11,7 +13,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Claude RTL",
+    "default_title": "Claude & ChatGPT RTL",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
@@ -20,9 +22,18 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://claude.ai/*", "*://*.claude.ai/*"],
-      "js": ["content.js"],
-      "css": ["styles.css"],
+      "matches": [
+        "*://claude.ai/*",
+        "*://*.claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
       "run_at": "document_idle"
     }
   ]

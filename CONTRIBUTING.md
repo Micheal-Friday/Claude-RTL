@@ -40,7 +40,7 @@ Each builds and ships independently (`npm run build:chrome`, `build:firefox`), w
 - `chrome/manifest.json`
 - `firefox/manifest.json`
 
-> ⚠️ **They are currently out of sync**: `chrome` 1.0.0, `firefox` 1.0.2, `package.json` 1.0.0. Firefox shipped patches the others did not follow. Whoever cuts the next release should decide the true current version and align all three — a version that differs per build makes bug reports unattributable, because "I'm on 1.0.0" stops identifying which code the reporter is running.
+The current version is **1.1.1** across all three files. Keep them aligned for future releases.
 
 ### Branch types in use
 

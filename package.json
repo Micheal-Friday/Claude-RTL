@@ -1,14 +1,17 @@
 {
   "name": "claude-rtl",
-  "version": "1.0.0",
-  "description": "Right-to-left Persian/Arabic support for claude.ai (Firefox & Chrome).",
+  "version": "1.1.1",
+  "description": "Right-to-left Persian/Arabic support for Claude and ChatGPT (Firefox & Chrome).",
   "private": true,
   "scripts": {
     "lint:firefox": "web-ext lint --source-dir=firefox",
-    "build:firefox": "web-ext build --source-dir=firefox --artifacts-dir=dist --overwrite-dest",
-    "build:chrome": "web-ext build --source-dir=chrome --artifacts-dir=dist --overwrite-dest"
+    "build:firefox": "web-ext build --source-dir=firefox --artifacts-dir=dist/firefox --overwrite-dest",
+    "build:chrome": "web-ext build --source-dir=chrome --artifacts-dir=dist/chrome --overwrite-dest",
+    "test": "node --test",
+    "test:browser": "node tests/browser-check.cjs"
   },
   "devDependencies": {
+    "jsdom": "^26.1.0",
     "web-ext": "10.3.0"
   }
 }

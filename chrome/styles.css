@@ -1,4 +1,4 @@
-/* Claude RTL — Persian & Arabic support for claude.ai */
+/* Claude & ChatGPT RTL — Persian & Arabic support */
 
 /* Every rule is scoped under html[data-claude-rtl="on"], a flag the content
    script sets only while the extension is enabled. Turning it off from the
@@ -31,12 +31,33 @@ html[data-claude-rtl="on"] h5[dir="ltr"],
 html[data-claude-rtl="on"] h6[dir="ltr"],
 html[data-claude-rtl="on"] blockquote[dir="ltr"],
 html[data-claude-rtl="on"] td[dir="ltr"],
-html[data-claude-rtl="on"] th[dir="ltr"] {
+html[data-claude-rtl="on"] th[dir="ltr"],
+html[data-claude-rtl="on"] [data-message-author-role="user"][dir],
+html[data-claude-rtl="on"] [data-message-author-role="user"] .whitespace-pre-wrap[dir] {
   text-align: start;
 }
 
+/* Table styles can override the direction implied by the HTML dir attribute.
+   Set it explicitly, including paragraphs nested in cells. Keep the rules
+   scoped to text containers so code and equations retain their LTR islands. */
+html[data-claude-rtl="on"] :is(td, th)[dir="rtl"],
+html[data-claude-rtl="on"] :is(td, th) :is(p, li, blockquote, h1, h2, h3, h4, h5, h6)[dir="rtl"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate !important;
+}
+
+html[data-claude-rtl="on"] :is(td, th)[dir="ltr"],
+html[data-claude-rtl="on"] :is(td, th) :is(p, li, blockquote, h1, h2, h3, h4, h5, h6)[dir="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+
 /* The message composer: caret and placeholder follow typing direction. */
-html[data-claude-rtl="on"] div[contenteditable="true"][dir="auto"] {
+html[data-claude-rtl="on"] [contenteditable="true"][dir="auto"],
+html[data-claude-rtl="on"] textarea#prompt-textarea[dir="auto"] {
+  text-align: start;
   unicode-bidi: plaintext;
 }
 
